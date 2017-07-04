@@ -65,6 +65,13 @@ extern "C"
 				 const char *origin,
 				 char *response, size_t * response_len,
 				 u2fh_cmdflags flags);
+  
+  U2FH_EXPORT u2fh_rc u2fh_register_selected_devices(u2fh_devs * devs,
+      const unsigned char *reg_devices,
+      const char *challenge,
+      const char *origin,
+      char *response, size_t * response_len,
+      u2fh_cmdflags flags);
 
   U2FH_EXPORT u2fh_rc u2fh_authenticate (u2fh_devs * devs,
 				    const char *challenge,
