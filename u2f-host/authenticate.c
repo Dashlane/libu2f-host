@@ -208,7 +208,7 @@ _u2fh_authenticate (u2fh_devs * devs,
 	{
 	  return U2FH_TIMEOUT_ERROR;
 	}
-      if (len == 2 && memcmp (buf, NOTSATISFIED, 2) == 0)
+      if ((flags & U2FH_REQUEST_USER_PRESENCE) && len == 2 && memcmp (buf, NOTSATISFIED, 2) == 0)
 	{
 	  Sleep (1000);
 	}
