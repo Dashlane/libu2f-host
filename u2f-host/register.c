@@ -206,7 +206,14 @@ u2fh_register2 (u2fh_devs * devs,
 		const char *origin, char *response, size_t * response_len,
 		u2fh_cmdflags flags)
 {
-  return _u2fh_register (devs, challenge, origin, &response, response_len,
+  // initialize
+  struct u2fdevice *dev;
+  for (dev = devs->first; dev != NULL; dev = dev->next)
+  {
+    dev->skipped = 0;
+  }
+
+  return _u2fh_register(devs, challenge, origin, &response, response_len,
 			 flags);
 }
 
@@ -263,6 +270,14 @@ u2fh_register (u2fh_devs * devs,
 {
   size_t response_len = 0;
   *response = NULL;
+
+  // initialize
+  struct u2fdevice *dev;
+  for (dev = devs->first; dev != NULL; dev = dev->next)
+  {
+      dev->skipped = 0;
+  }
+
   return _u2fh_register (devs, challenge, origin, response, &response_len,
 			 flags);
 }

@@ -173,11 +173,7 @@ _u2fh_authenticate (u2fh_devs * devs,
       for (dev = devs->first; dev != NULL; dev = dev->next)
 	{
 	  unsigned char tmp_buf[MAXDATASIZE];
-	  if (iterations == 0)
-	    {
-	      dev->skipped = 0;
-	    }
-	  else if (dev->skipped != 0)
+	  if (dev->skipped != 0)
 	    {
 	      continue;
 	    }
@@ -254,7 +250,15 @@ u2fh_authenticate2 (u2fh_devs * devs,
 		    const char *origin, char *response, size_t * response_len,
 		    u2fh_cmdflags flags)
 {
-  return _u2fh_authenticate (devs, challenge, origin, &response, response_len,
+
+  // initialize
+  struct u2fdevice *dev;
+  for (dev = devs->first; dev != NULL; dev = dev->next)
+  {
+    dev->skipped = 0;
+  }
+
+  return _u2fh_authenticate(devs, challenge, origin, &response, response_len,
 			     flags);
 }
 
@@ -277,8 +281,48 @@ u2fh_authenticate (u2fh_devs * devs,
 		   const char *origin, char **response, u2fh_cmdflags flags)
 {
   size_t response_len = 0;
-
   *response = NULL;
+
+  // initialize
+  struct u2fdevice *dev;
+  for (dev = devs->first; dev != NULL; dev = dev->next)
+  {
+      dev->skipped = 0;
+  }
+
   return _u2fh_authenticate (devs, challenge, origin, response, &response_len,
 			     flags);
+}
+
+/**
+* u2fh_authenticate2_selected_device:
+* @devs: a device set handle, from u2fh_devs_init() and u2fh_devs_discover().
+* @reg_devices: an array which specifies which devices we want to ask for authentification (0->don't ask). The array must be the same size as the number of devices in devs.
+* @challenge: string with JSON data containing the challenge.
+* @origin: U2F origin URL.
+* @response: pointer to string for output data
+* @response_len: pointer to length of @response
+* @flags: set of ORed #u2fh_cmdflags values.
+*
+* Perform the U2F Authenticate operation.
+*
+* Returns: On success %U2FH_OK (integer 0) is returned, and on errors
+* an #u2fh_rc error code.
+*/
+u2fh_rc u2fh_authenticate2_selected_device(u2fh_devs * devs,
+    const unsigned char *auth_devices,
+    const char *challenge,
+    const char *origin,
+    char *response, size_t * response_len,
+    u2fh_cmdflags flags)
+{
+    struct u2fdevice *dev;
+    int current = 0;
+    for (dev = devs->first; dev != NULL; dev = dev->next, current++)
+    {
+        // skip the devices we don't want to authentificate
+        dev->skipped = !auth_devices[current];
+    }
+    return _u2fh_authenticate(devs, challenge, origin, &response, response_len,
+        flags);
 }
