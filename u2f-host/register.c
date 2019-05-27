@@ -145,6 +145,10 @@ _u2fh_register (u2fh_devs * devs,
 	}
       for (dev = devs->first; dev != NULL; dev = dev->next)
 	{
+      if (dev->skipped)
+      {
+        continue;
+      }
 	  len = MAXDATASIZE;
 	  rc = send_apdu (devs, dev->id, U2F_REGISTER, data, sizeof (data),
 			  flags & U2FH_REQUEST_USER_PRESENCE ? 3 : 0, buf,
@@ -162,7 +166,11 @@ _u2fh_register (u2fh_devs * devs,
 	{
 	  break;
 	}
-      Sleep (1000);
+      // if we don't request the user presence, no need to sleep
+      if (flags & U2FH_REQUEST_USER_PRESENCE)
+      {
+         Sleep(1000);
+      }
     }
   while ((flags & U2FH_REQUEST_USER_PRESENCE)
 	 && len == 2 && memcmp (buf, NOTSATISFIED, 2) == 0);
@@ -195,8 +203,48 @@ u2fh_register2 (u2fh_devs * devs,
 		const char *origin, char *response, size_t * response_len,
 		u2fh_cmdflags flags)
 {
-  return _u2fh_register (devs, challenge, origin, &response, response_len,
+  // initialize
+  struct u2fdevice *dev;
+  for (dev = devs->first; dev != NULL; dev = dev->next)
+  {
+    dev->skipped = 0;
+  }
+
+  return _u2fh_register(devs, challenge, origin, &response, response_len,
 			 flags);
+}
+
+/**
+* u2fh_register_selected_devices:
+* @devs: a device set handle, from u2fh_devs_init() and u2fh_devs_discover().
+* @reg_devices: an array which specifies which devices we want to ask for registration (0->don't ask). The array must be the same size as the number of devices in devs.
+* @challenge: string with JSON data containing the challenge.
+* @origin: U2F origin URL.
+* @response: pointer to output string with JSON data.
+* @response_len: pointer to length of @response
+* @flags: set of ORed #u2fh_cmdflags values.
+*
+* Perform the U2F Register operation.
+*
+* Returns: On success %U2FH_OK (integer 0) is returned, and on errors
+* an #u2fh_rc error code.
+*/
+u2fh_rc u2fh_register_selected_devices(u2fh_devs * devs,
+    const unsigned char *reg_devices,
+    const char *challenge,
+    const char *origin,
+    char *response, size_t * response_len,
+    u2fh_cmdflags flags)
+{
+  struct u2fdevice *dev;
+  int current = 0;
+  for (dev = devs->first; dev != NULL; dev = dev->next, current++)
+  {
+    // skip the devices we don't want to register
+    dev->skipped = !reg_devices[current];
+  }
+  return _u2fh_register(devs, challenge, origin, &response, response_len,
+        flags);
 }
 
 /**
@@ -219,6 +267,14 @@ u2fh_register (u2fh_devs * devs,
 {
   size_t response_len = 0;
   *response = NULL;
+
+  // initialize
+  struct u2fdevice *dev;
+  for (dev = devs->first; dev != NULL; dev = dev->next)
+  {
+      dev->skipped = 0;
+  }
+
   return _u2fh_register (devs, challenge, origin, response, &response_len,
 			 flags);
 }
